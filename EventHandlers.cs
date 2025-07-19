@@ -1,19 +1,20 @@
+using AdminToys;
 using Exiled.API.Enums;
+using Exiled.API.Extensions;
 using Exiled.API.Features;
-using ExiledR = Exiled.API.Features;
+using Exiled.API.Features.Toys;
+using Exiled.API.Structs;
 using Exiled.Events.EventArgs.Player;
-using LabAPI = LabApi.Features.Wrappers;
+using Exiled.Events.Handlers;
+using Interactables;
+using InventorySystem;
 using UnityEngine;
+using YamlDotNet.Serialization;
 using static UnityEngine.Rendering.DebugUI.Table;
 using ExiledIAPI= Exiled.API.Features.Items.Item;
+using ExiledR = Exiled.API.Features;
+using LabAPI = LabApi.Features.Wrappers;
 using ServerEvents = Exiled.Events.Handlers.Server;
-using YamlDotNet.Serialization;
-using InventorySystem;
-using Exiled.API.Extensions;
-using Exiled.API.Features.Toys;
-using AdminToys;
-using Exiled.Events.Handlers;
-using Exiled.API.Structs;
 
 namespace SCP1162
 {
@@ -41,44 +42,46 @@ namespace SCP1162
 
         private void Gamble(LabApi.Features.Wrappers.Item? item, Exiled.API.Features.Player player)
         {
-            try
+            if (!player.IsScp && player.IsAlive)
             {
-                System.Random random = new();
-                if (item == null)
+                try
                 {
-                    player.EnableEffect(EffectType.SeveredHands);
-                    player.ShowHint("You insert your hands into SCP-1162 and lose feeling in them.", 10f);
-                    player.ShowHitMarker(2f);
-                }
-                else
-                {
-                    if (item.Type is ItemType.SCP330)
+                    System.Random random = new();
+                    if (item == null)
                     {
-                        player.ShowHint("You put an SCP-330-1 instance in and SCP-1162 just spits it back out", 7.5f);
-                        return;
+                        player.EnableEffect(EffectType.SeveredHands);
+                        player.ShowHint("You insert your hands into SCP-1162 and lose feeling in them.", 10f);
+                        player.ShowHitMarker(2f);
                     }
                     else
                     {
-                        player.RemoveHeldItem(true);
-                        if (_rng.NextDouble() < _plugin.Config.LossChance) { player.ShowHint($"You insert {Utils.GetItemName(item.Type)} and get nothing in return"); return; }
+                        if (item.Type is ItemType.SCP330)
+                        {
+                            player.ShowHint("You put an SCP-330-1 instance in and SCP-1162 just spits it back out", 7.5f);
+                            return;
+                        }
                         else
                         {
-                            int _temp = _rng.Next(0, Pool.Length);
-                            var newItem = player.AddItem(Pool[_temp]);
-                            player.AddItem(newItem);
-                            player.ShowHint($"You got {Utils.GetItemName(Pool[_temp])} from SCP-1162", 7.5f);
-                            player.CurrentItem = newItem;
+                            player.RemoveHeldItem(true);
+                            if (_rng.NextDouble() < _plugin.Config.LossChance) { player.ShowHint($"You insert {Utils.GetItemName(item.Type)} and get nothing in return"); return; }
+                            else
+                            {
+                                int _temp = _rng.Next(0, Pool.Length);
+                                var newItem = player.AddItem(Pool[_temp]);
+                                player.AddItem(newItem);
+                                player.ShowHint($"You got {Utils.GetItemName(Pool[_temp])} from SCP-1162", 7.5f);
+                                player.CurrentItem = newItem;
+                            }
                         }
                     }
                 }
+                catch (System.Exception ex)
+                {
+                    Log.Error($"Error in Gamble method: {ex.Message}\nStackTrace: {ex.StackTrace}\nInner: {ex.InnerException}\nSource: {ex.Source}");
+                    player.ShowHint("Something went wrong!\nYou should try again and if this continues: \nDM Noobest1001,\nmake an issue on GitHub,\nor make a ticket at https://discord.com/channels/1262120573148856341/1291640765805629543 and ping @noobest1001", 5f);
+                }
             }
-            catch (System.Exception ex)
-            {
-                Log.Error($"Error in Gamble method: {ex.Message}\nStackTrace: {ex.StackTrace}\nInner: {ex.InnerException}\nSource: {ex.Source}");
-                player.ShowHint("Something went wrong!\nYou should try again and if this continues: \nDM Noobest1001,\nmake an issue on GitHub,\nor make a ticket at https://discord.com/channels/1262120573148856341/1291640765805629543 and ping @noobest1001", 5f);
-            }
-
-            return;
+                return;
         }
     }
 }
