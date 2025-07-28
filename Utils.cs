@@ -47,6 +47,7 @@ namespace SCP1162
         /// cref="CandyKindID.Pink"/> for 0, <see cref="CandyKindID.Blue"/> for 1,  <see cref="CandyKindID.Green"/> for
         /// 2, <see cref="CandyKindID.Yellow"/> for 3,  <see cref="CandyKindID.Purple"/> for 4, <see
         /// cref="CandyKindID.Rainbow"/> for 5,  and <see cref="CandyKindID.Red"/> for any other value.</returns>
+        [Obsolete("Until I can get Candy added and I get off Vacation")]
         public static CandyKindID AddCandy(int candy)
         {
             return candy switch
@@ -70,6 +71,7 @@ namespace SCP1162
         /// <param name="candy">An integer representing the candy type. Valid values range from 0 to 5, where each value corresponds to a
         /// specific color. Any other value defaults to red.</param>
         /// <returns>A string containing the color representation of the candy, formatted with HTML-like color tags.</returns>
+        [Obsolete("Until I can get Candy added and I get off Vacation")]
         public static string CandytoString(int candy)
         {
             return candy switch
