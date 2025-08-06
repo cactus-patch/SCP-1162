@@ -49,7 +49,7 @@ namespace SCP1162
             ItemType.Coin,
             ItemType.Flashlight,
             ItemType.Radio,
-        ];
+        ]; 
 
 
         [Description("Room used for SCP-1162.")]

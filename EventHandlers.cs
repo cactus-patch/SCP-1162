@@ -10,7 +10,7 @@ using LabAPI = LabApi.Features.Wrappers;
 
 namespace SCP1162
 {
-    public class EventHandler(Plugin plugin)
+    public class EventHandler(Plugin plugin) 
     {
         private readonly ItemType[] _pool = Plugin.Instance.Config.Pool;
         [YamlIgnore] private readonly System.Random _rng = new();

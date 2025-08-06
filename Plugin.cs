@@ -4,7 +4,7 @@ using ServerEvents = Exiled.Events.Handlers.Server;
 namespace SCP1162
 {
 
-    public class Plugin : Plugin<Config>
+    public class Plugin : Plugin<Config> 
     {
         public override string Prefix => "SCP_1162";
         public override string Name => "SCP-1162";

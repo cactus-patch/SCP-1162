@@ -91,7 +91,7 @@ namespace SCP1162
             player.AddItem(item);
             player.CurrentItem = item;
         }
-
+ 
         /// <summary>
         /// Gives and equips <see cref="ExItem.Item"/> the specified equipment item to the player.
         /// </summary>
