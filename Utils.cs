@@ -1,13 +1,8 @@
 ﻿using Exiled.API.Enums;
 using Exiled.API.Features;
 using EP = Exiled.API.Features.Player;
-using ExItem = Exiled.API.Features.Items; // Exiled.API.Features.Items not ExtededItems
+using ExItem = Exiled.API.Features.Items; // Exiled.API.Features.Items not ExtendedItems
 using InventorySystem.Items.Usables.Scp330;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace SCP1162
@@ -47,6 +42,7 @@ namespace SCP1162
         /// cref="CandyKindID.Pink"/> for 0, <see cref="CandyKindID.Blue"/> for 1,  <see cref="CandyKindID.Green"/> for
         /// 2, <see cref="CandyKindID.Yellow"/> for 3,  <see cref="CandyKindID.Purple"/> for 4, <see
         /// cref="CandyKindID.Rainbow"/> for 5,  and <see cref="CandyKindID.Red"/> for any other value.</returns>
+        [Obsolete("Used for adding candy to 1162")]
         public static CandyKindID AddCandy(int candy)
         {
             return candy switch
@@ -70,6 +66,7 @@ namespace SCP1162
         /// <param name="candy">An integer representing the candy type. Valid values range from 0 to 5, where each value corresponds to a
         /// specific color. Any other value defaults to red.</param>
         /// <returns>A string containing the color representation of the candy, formatted with HTML-like color tags.</returns>
+        [Obsolete("Used for adding candy to 1162")]
         public static string CandytoString(int candy)
         {
             return candy switch
@@ -89,7 +86,7 @@ namespace SCP1162
         /// </summary>
         /// <param name="item"></param>
         /// <param name="player"></param>
-        public static void GiveEquip(ExItem.Item item, EP player)
+        private static void GiveEquip(ExItem.Item item, EP player)
         {
             player.AddItem(item);
             player.CurrentItem = item;

@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Drawing;
 using Exiled.API.Enums;
 using Exiled.API.Interfaces;
 
