@@ -1,5 +1,6 @@
 using Discord;
 using Exiled.API.Enums;
+using Exiled.API.Extensions;
 using Exiled.API.Features;
 using Exiled.API.Features.Toys;
 using Exiled.API.Structs;
@@ -62,8 +63,6 @@ namespace SCP1162
 
             
             _interactable.InteractionDuration = 0.5f;
-            _interactable.Spawn();
-            _visible.Spawn();
             
         }
 
