@@ -1,9 +1,9 @@
 ﻿using Exiled.API.Enums;
 using Exiled.API.Features;
-using EP = Exiled.API.Features.Player;
-using ExItem = Exiled.API.Features.Items; // Exiled.API.Features.Items not ExtendedItems
 using InventorySystem.Items.Usables.Scp330;
 using UnityEngine;
+using EP = Exiled.API.Features.Player;
+using ExItem = Exiled.API.Features.Items; // Exiled.API.Features.Items not ExtendedItems
 
 namespace SCP1162
 {
@@ -59,6 +59,7 @@ namespace SCP1162
 
         /// <summary>
         /// Converts a candy identifier to its corresponding color representation as a formatted string.
+        /// Credit goes to Candy Utils for this function
         /// </summary>
         /// <remarks>The returned string uses HTML-like tags to specify the color, which can be useful for
         /// rendering in environments that support such formatting. For example, a value of 0 returns a pink color,
@@ -91,7 +92,7 @@ namespace SCP1162
             player.AddItem(item);
             player.CurrentItem = item;
         }
- 
+        
         /// <summary>
         /// Gives and equips <see cref="ExItem.Item"/> the specified equipment item to the player.
         /// </summary>

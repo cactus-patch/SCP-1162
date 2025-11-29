@@ -1,5 +1,8 @@
 using Exiled.API.Features;
-using ServerEvents = Exiled.Events.Handlers.Server;
+using Exiled.Events.EventArgs.Server;
+using Exiled.Events.Features;
+using Server = Exiled.Events.Handlers.Server;
+using Interact = LabApi.Events.Handlers.PlayerEvents;
 
 namespace SCP1162
 {
@@ -18,7 +21,10 @@ namespace SCP1162
         {
             Instance = this;
             _eventHandler = new EventHandler(this);
-            ServerEvents.RoundStarted += _eventHandler.OnRoundStarted;
+            
+            Server.RoundStarted += _eventHandler.OnRoundStarted;
+            Server.RoundEnded += _eventHandler.OnRoundEnded;
+            Interact.InteractedToy += _eventHandler.OnPlayerUsedToy;
 
 
             base.OnEnabled();
@@ -26,7 +32,11 @@ namespace SCP1162
 
         public override void OnDisabled()
         {
-            ServerEvents.RoundStarted -= _eventHandler!.OnRoundStarted;
+            Server.RoundStarted -= _eventHandler!.OnRoundStarted;
+            Server.RoundEnded -= _eventHandler!.OnRoundEnded;
+            Interact.InteractedToy -= _eventHandler.OnPlayerUsedToy;
+            
+            
             _eventHandler = null;
             Instance = null;
 

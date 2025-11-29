@@ -3,41 +3,98 @@ using Exiled.API.Enums;
 using Exiled.API.Features;
 using Exiled.API.Features.Toys;
 using Exiled.API.Structs;
+using Exiled.Events.EventArgs.Server;
+using LabApi.Events.Arguments.PlayerEvents;
+using LabApi.Features.Wrappers;
 using UnityEngine;
 using YamlDotNet.Serialization;
+using AdminToy = Exiled.API.Features.Toys.AdminToy;
 using ExiledR = Exiled.API.Features;
-using LabAPI = LabApi.Features.Wrappers; 
 
 namespace SCP1162
 {
-    public class EventHandler(Plugin plugin) 
+    public class EventHandler(Plugin plugin)
     {
-        private readonly ItemType[] _pool = Plugin.Instance.Config.Pool;
+
+        private static readonly ItemType[] Fallback = 
+        [
+            ItemType.KeycardJanitor,
+            ItemType.KeycardZoneManager,
+            ItemType.KeycardScientist,
+            ItemType.KeycardContainmentEngineer,
+            ItemType.KeycardResearchCoordinator,
+            ItemType.KeycardMTFPrivate,
+            ItemType.KeycardMTFOperative,
+            ItemType.KeycardMTFCaptain,
+            ItemType.KeycardFacilityManager,
+            ItemType.KeycardChaosInsurgency,
+            ItemType.KeycardO5,
+            ItemType.SurfaceAccessPass,
+            ItemType.Painkillers,
+            ItemType.Medkit,
+            ItemType.Adrenaline,
+            ItemType.SCP500,
+            ItemType.SCP207,
+            ItemType.AntiSCP207,
+            ItemType.GrenadeHE,
+            ItemType.GrenadeFlash,
+            ItemType.Coin,
+            ItemType.Flashlight,
+            ItemType.Radio,
+        ];  
+         
+        private readonly ItemType[] _pool = Plugin.Instance?.Config.Pool ?? Fallback;
         [YamlIgnore] private readonly System.Random _rng = new();
+
+        private InteractableToy? _interactable;
 
         public void OnRoundStarted()
         {
-            Room room = Room.Get(plugin.Config.RoomType);
+            ExiledR.Room room = ExiledR.Room.Get(plugin.Config.RoomType);
             Vector3 position = Utils.GetGlobalCords(plugin.Config.RoomType, new Vector3(16.68f, 11.43f, 8.11f));
             Quaternion rotation = room.Rotation;
             Vector3 scale = new(2f, plugin.Config.Vertical, 2f);
 
-            var Interactable = LabAPI.InteractableToy.Create(position, rotation, scale);
+            _interactable = InteractableToy.Create(position, rotation, scale);
             
-            var Visible = Primitive.Create(new PrimitiveSettings(PrimitiveType.Sphere,Color.black,position,Vector3.zero,scale,true));
+            // ReSharper disable once InconsistentNaming
+            var _visible = Primitive.Create(new PrimitiveSettings(PrimitiveType.Sphere,Color.black,position,Vector3.zero,scale,true));
 
-            Interactable.InteractionDuration = 0.5f;
-
-            Interactable.OnSearched += player => Gamble(player.CurrentItem, player);
+            
+            _interactable.InteractionDuration = 0.5f;
+            _interactable.Spawn();
+            _visible.Spawn();
+            
         }
 
-        private void Gamble(LabAPI.Item? item, Player player)
+        public void OnPlayerUsedToy(PlayerInteractedToyEventArgs ev)
         {
-            if (player is { IsScp: false, IsAlive: true })
+            var player = ExiledR.Player.Get(ev.Player);
+            if (ev.Interactable == _interactable)
+            {
+                Gamble(ev.Player.CurrentItem, player);
+            }
+        }
+
+        public void OnRoundEnded(RoundEndedEventArgs ev)
+        {
+            _interactable = null;
+            foreach (var toy in InteractableToy.List)
+            {
+                toy.Destroy();
+            }
+            foreach (var primitive in AdminToy.List)
+            {
+                primitive.Destroy();
+            }
+        }
+        
+        private void Gamble(Item? item, ExiledR.Player player)
+        {
+            if (player is { IsScp: false, IsAlive: true, })
             {
                 try
                 {
-                    
                     if (item == null)
                     {
                         player.EnableEffect(EffectType.SeveredHands);
@@ -52,9 +109,14 @@ namespace SCP1162
                             return;
                         }
 
-                        player.RemoveHeldItem(true);
-                        if (_rng.NextDouble() < plugin.Config.LossChance) { player.ShowHint($"You insert {Utils.GetItemName(item.Type)} and get nothing in return"); return; }
+                        player.RemoveHeldItem();
+                        if (_rng.NextDouble() < plugin.Config.LossChance)
+                        {
+                            player.ShowHint($"You insert {Utils.GetItemName(item.Type)} and get nothing in return");
+                            return;
+                        }
 
+                        // ReSharper disable once InconsistentNaming
                         int _temp = _rng.Next(0, _pool.Length);
                         var newItem = player.AddItem(_pool[_temp]);
                         player.AddItem(newItem);
@@ -68,7 +130,6 @@ namespace SCP1162
                     player.ShowHint("Something went wrong!\nYou should try again and if this continues: \nDM Noobest1001,\nmake an issue on GitHub,\nor make a ticket at https://discord.com/channels/1262120573148856341/1291640765805629543 and ping @noobest1001", 5f);
                 }
             }
-            return;
         }
     }
 }
