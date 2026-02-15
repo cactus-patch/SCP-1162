@@ -1,23 +1,42 @@
-using Discord;
-using Exiled.API.Enums;
-using Exiled.API.Extensions;
-using Exiled.API.Features;
-using Exiled.API.Features.Toys;
-using Exiled.API.Structs;
-using Exiled.Events.EventArgs.Server;
+using AdminToys;
+using CustomPlayerEffects;
+using InventorySystem;
 using LabApi.Events.Arguments.PlayerEvents;
 using LabApi.Features.Wrappers;
+using LabApi.Loader.Features.Plugins;
+using PlayerRoles;
 using UnityEngine;
 using YamlDotNet.Serialization;
-using AdminToy = Exiled.API.Features.Toys.AdminToy;
-using ExiledR = Exiled.API.Features;
+using Interact = LabApi.Events.Handlers.PlayerEvents;
+using Logger = LabApi.Features.Console.Logger;
+using Player = LabApi.Features.Wrappers.Player;
+using PrimitiveObjectToy = LabApi.Features.Wrappers.PrimitiveObjectToy;
+using Random = System.Random;
+using Room = LabApi.Features.Wrappers.Room;
+using Server = LabApi.Events.Handlers.ServerEvents;
 
 namespace SCP1162
 {
-    public class EventHandler(Plugin plugin)
+    public class EventHandler
     {
+        private static Config _config => Scp1162.Instance.Config;
 
-        private static readonly ItemType[] Fallback = 
+        internal EventHandler()
+        {
+            Server.RoundStarted += OnRoundStarted;
+            Interact.InteractedToy += OnPlayerUsedToy;
+        }
+
+        ~EventHandler()
+        {
+            Server.RoundStarted -= OnRoundStarted;
+            Interact.InteractedToy -= OnPlayerUsedToy;
+
+            _interactable?.Destroy();
+            _visible.Destroy();
+        }
+        
+        private static readonly ItemType[] Fallback =
         [
             ItemType.KeycardJanitor,
             ItemType.KeycardZoneManager,
@@ -42,93 +61,118 @@ namespace SCP1162
             ItemType.Coin,
             ItemType.Flashlight,
             ItemType.Radio,
-        ];  
-         
-        private readonly ItemType[] _pool = Plugin.Instance?.Config.Pool ?? Fallback;
-        [YamlIgnore] private readonly System.Random _rng = new();
+        ];
+        
+        private readonly ItemType[] _pool = _config.Pool ?? Fallback;
+        [YamlIgnore] private readonly Random _rng = new();
 
         private InteractableToy? _interactable;
+        private PrimitiveObjectToy _visible;
 
-        public void OnRoundStarted()
+        private void OnRoundStarted()
         {
-            ExiledR.Room room = ExiledR.Room.Get(plugin.Config.RoomType);
-            Vector3 position = Utils.GetGlobalCords(plugin.Config.RoomType, new Vector3(16.68f, 11.43f, 8.11f));
+            Room room = Room.Get(_config.RoomName).First();
+            Vector3 position = Utils.GetGlobalCords(_config.RoomName, new Vector3(16.68f, 11.43f, 8.11f));
             Quaternion rotation = room.Rotation;
-            Vector3 scale = new(2f, plugin.Config.Vertical, 2f);
-
-            _interactable = InteractableToy.Create(position, rotation, scale);
+            Vector3 scale = new(2f, _config.Vertical, 2f);
             
-            // ReSharper disable once InconsistentNaming
-            var _visible = Primitive.Create(new PrimitiveSettings(PrimitiveType.Sphere,Color.black,position,Vector3.zero,scale,true));
-
-            
+            _interactable = InteractableToy.Create(room.Transform);
+            _interactable.Position = position;
+            _interactable.Rotation = rotation;
+            _interactable.Scale = scale;
+            _interactable.IsStatic = true;
             _interactable.InteractionDuration = 0.5f;
+
+            if (_interactable is null)
+            {
+                Logger.Error("Interactable is null");
+                return;
+            }
+
+            _visible = PrimitiveObjectToy.Create(room.Transform);
+            _visible.Position = position + new Vector3(0, .2f ,0);
+            _visible.Rotation = rotation;
+            _visible.Scale = scale;
+            _visible.Parent = room.Transform;
+            _visible.Color = new Color(0, 0, 0);
+            _visible.Flags = PrimitiveFlags.Visible;
+            _visible.Type = PrimitiveType.Sphere;
+            _visible.IsStatic = true;
             
+            _interactable.Spawn();
+            _visible.Spawn();
         }
 
-        public void OnPlayerUsedToy(PlayerInteractedToyEventArgs ev)
+        private void OnPlayerUsedToy(PlayerInteractedToyEventArgs ev)
         {
-            var player = ExiledR.Player.Get(ev.Player);
             if (ev.Interactable == _interactable)
             {
-                Gamble(ev.Player.CurrentItem, player);
-            }
-        }
-
-        public void OnRoundEnded(RoundEndedEventArgs ev)
-        {
-            _interactable = null;
-            foreach (var toy in InteractableToy.List)
-            {
-                toy.Destroy();
-            }
-            foreach (var primitive in AdminToy.List)
-            {
-                primitive.Destroy();
+                GambleDec(ev.Player.CurrentItem, ev.Player);
             }
         }
         
-        private void Gamble(Item? item, ExiledR.Player player)
+        private void GambleDec(Item? item, Player player)
         {
-            if (player is { IsScp: false, IsAlive: true, })
+            if (player.Team != Team.SCPs && !player.IsDisarmed)
             {
                 try
                 {
                     if (item == null)
                     {
-                        player.EnableEffect(EffectType.SeveredHands);
-                        player.ShowHint("You insert your hands into SCP-1162 and lose feeling in them.", 10f);
-                        player.ShowHitMarker(2f);
+                        if (_config.DamageOnHand)
+                        {
+                            player.Damage(_config.DamageAmount, null, armorPenetration: 100);
+                        }
+                        else
+                        {
+                            player.EnableEffect<SeveredHands>(duration: 100f);
+                            player.SendHint("You insert your hands into SCP-1162 and lose feeling in them.", 10f);
+                            player.SendHitMarker(2f);  
+                        }
+                    }
+                    
+                    else if (item.Category is ItemCategory.SCPItem or ItemCategory.SpecialWeapon)
+                    {
+                        player.SendHint("You put " + Utils.GetItemName(item.Type) + " in and SCP-1162 just spits it back out", 7.5f);
                     }
                     else
                     {
                         if (item.Type is ItemType.SCP330)
                         {
-                            player.ShowHint("You put an SCP-330-1 instance in and SCP-1162 just spits it back out", 7.5f);
+                            player.SendHint("You put an SCP-330-1 instance in and SCP-1162 just spits it back out", 7.5f);
                             return;
                         }
-
-                        player.RemoveHeldItem();
-                        if (_rng.NextDouble() < plugin.Config.LossChance)
-                        {
-                            player.ShowHint($"You insert {Utils.GetItemName(item.Type)} and get nothing in return");
-                            return;
-                        }
-
-                        // ReSharper disable once InconsistentNaming
-                        int _temp = _rng.Next(0, _pool.Length);
-                        var newItem = player.AddItem(_pool[_temp]);
-                        player.AddItem(newItem);
-                        player.ShowHint($"You got {Utils.GetItemName(_pool[_temp])} from SCP-1162", 7.5f);
-                        player.CurrentItem = newItem;
+                        Gamble(player);
+                        
                     }
                 }
                 catch (Exception ex)
                 {
-                    Log.Send($"Error in Gamble method: {ex.Message}\nStackTrace: {ex.StackTrace}\nInner: {ex.InnerException}\nSource: {ex.Source}", LogLevel.Error, ConsoleColor.Cyan);
-                    player.ShowHint("Something went wrong!\nYou should try again and if this continues: \nDM Noobest1001,\nmake an issue on GitHub,\nor make a ticket at https://discord.com/channels/1262120573148856341/1291640765805629543 and ping @noobest1001", 5f);
+                    player.CurrentItem = null;
+                    Logger.Error(ex.Message);
+                    Logger.Error(ex.Source);
                 }
             }
+        }
+
+        private void Gamble(Player player)
+        {
+            Inventory _inv = player.Inventory;
+            ItemType item = _inv.CurInstance.ItemTypeId;
+            player.RemoveItem(item);
+            
+            if (_rng.NextDouble() < _config.LossChance)
+            {
+                player.SendHint($"You insert {Utils.GetItemName(item)} and get nothing in return");
+                return;
+            }
+            // ReSharper disable once InconsistentNaming
+            var _temp = _rng.Next(0, _pool.Length);
+            Item newItem = player.AddItem(_pool[_temp]);
+            
+            player.AddItem(newItem.Type);
+            player.SendHint($"You got {Utils.GetItemName(_pool[_temp])} from SCP-1162", 7.5f);
+            player.CurrentItem = newItem;
         }
     }
 }
